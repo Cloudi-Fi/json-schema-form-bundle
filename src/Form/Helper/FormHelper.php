@@ -14,6 +14,7 @@ use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TimeType;
 use Symfony\Component\Form\Extension\Core\Type\UrlType;
+use Cyve\JsonSchemaFormBundle\Validator\Constraint\Schema;
 
 class FormHelper
 {
@@ -23,44 +24,17 @@ class FormHelper
      */
     public static function resolveFormType($schema): ?string
     {
-        if (is_array($schema->type)) {
-            throw new \LogicException('Multiple types support is not implemeted yet');
+        if (!isset($schema->widget) || !isset($schema->widget->id)) {
+            return null;
         }
 
-        if (isset($schema->enum) || isset($schema->oneOf)) {
-            return ChoiceType::class;
-        }
-
-        switch ($schema->type) {
-            case 'array':
-                return CollectionType::class;
+        switch ($schema->widget->id) {
+            case 'radio':
+                return ChoiceType::class;
             case 'object':
                 return SchemaType::class;
-            case 'integer':
-                return IntegerType::class;
             case 'number':
                 return NumberType::class;
-            case 'boolean':
-                return CheckboxType::class;
-            case 'string':
-                switch ($schema->format ?? null) {
-                    case 'date-time':
-                        return DateTimeType::class;
-                    case 'date':
-                        return DateType::class;
-                    case 'time':
-                        return TimeType::class;
-                    case 'email':
-                    case 'idn-email':
-                        return EmailType::class;
-                    case 'uri':
-                    case 'uri-reference':
-                    case 'iri':
-                    case 'iri-reference':
-                        return UrlType::class;
-                    default:
-                        return TextType::class;
-                }
             default:
                 return null;
         }
@@ -72,10 +46,6 @@ class FormHelper
      */
     public static function resolveFormOptions($schema): array
     {
-        if (is_array($schema->type)) {
-            throw new \LogicException('Multiple types support is not implemeted yet');
-        }
-
         $options = [];
 
         if (isset($schema->title)) {
@@ -86,48 +56,39 @@ class FormHelper
             $options['help'] = $schema->description;
         }
 
-        if (isset($schema->default)) {
-            $options['empty_data'] = $schema->default;
+        if (isset($schema->placeholder)) {
+            $options['empty_data'] = $schema->placeholder;
         }
 
         if (isset($schema->oneOf)) {
             $tab = [];
-            foreach ($schema->oneOf as $value) {
-                $tab[$value->title] = $value->description;
-                if (isset($value->default) && $value->default) {
-                    $options['data'] = $value->description;
+            foreach ($schema->oneOf as $oneOf) {
+                foreach ($oneOf->enum as $value) {
+                    $tab[$oneOf->description] = $value;
+                    if (isset($schema->default) && $schema->default == $value) {
+                        $options['data'] = $value;
+                    }
                 }
             }
-
-            return $options + ['choices' => $tab];
+            $options = $options + ['choices' => $tab];
         }
 
-        if (isset($schema->enum)) {
-            return $options + ['choices' => array_combine($schema->enum, $schema->enum)];
+        if (!isset($schema->widget) || !isset($schema->widget->id)) {
+            return null;
         }
 
-        switch ($schema->type) {
-            case 'array':
-                return $options + [
-                    'allow_add' => true,
-                    'allow_delete' => true,
-                    'delete_empty' => true,
-                    'entry_type' => self::resolveFormType($schema->items),
-                    'entry_options' => self::resolveFormOptions($schema->items),
+        switch ($schema->widget->id) {
+            case 'radio':
+                return  $options + [
+                    'expanded' => true,
+                    'multiple' => false,
+                    'required' => true,
                 ];
             case 'object':
-                return $options + ['data_schema' => $schema];
-            case 'string':
-                switch ($schema->format ?? null) {
-                    case 'date-time':
-                        return $options + ['input' => 'string', 'input_format' => 'c'];
-                    case 'date':
-                        return $options + ['input' => 'string', 'input_format' => 'Y-m-d'];
-                    case 'time':
-                        return $options + ['input' => 'string', 'input_format' => 'H:i:s'];
-                    default:
-                        return $options;
-                }
+                return $options + [
+                    'data_schema' => $schema,
+                    'data' => $schema,
+                ];
             default:
                 return $options;
         }
