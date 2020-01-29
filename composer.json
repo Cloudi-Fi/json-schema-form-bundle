@@ -1,5 +1,5 @@
 {
-    "name": "cyve/json-schema-form-bundle",
+    "name": "cloudifi/json-schema-form-bundle",
     "description": "Create Symfony forms from JSON schema",
     "type": "symfony-bundle",
     "license": "MIT",
