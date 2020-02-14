@@ -29,6 +29,7 @@ class FormHelper
         }
 
         switch ($schema->widget->id) {
+            case 'select':
             case 'radio':
                 return ChoiceType::class;
             case 'object':
@@ -81,6 +82,12 @@ class FormHelper
             case 'radio':
                 return  $options + [
                     'expanded' => true,
+                    'multiple' => false,
+                    'required' => true,
+                ];
+            case 'select':
+                return  $options + [
+                    'expanded' => false,
                     'multiple' => false,
                     'required' => true,
                 ];
