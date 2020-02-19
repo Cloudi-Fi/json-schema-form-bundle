@@ -15,9 +15,12 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TimeType;
 use Symfony\Component\Form\Extension\Core\Type\UrlType;
 use Cyve\JsonSchemaFormBundle\Validator\Constraint\Schema;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 
 class FormHelper
 {
+    protected const PATTERN = '/^entity_/i';
+
     /**
      * @param object $schema
      * @return string|null
@@ -26,6 +29,10 @@ class FormHelper
     {
         if (!isset($schema->widget) || !isset($schema->widget->id)) {
             return null;
+        }
+
+        if (isset($schema->widget->type) && preg_match(self::PATTERN, $schema->widget->type, $output)) {
+            return EntityType::class;
         }
 
         switch ($schema->widget->id) {
@@ -76,6 +83,14 @@ class FormHelper
 
         if (!isset($schema->widget) || !isset($schema->widget->id)) {
             return null;
+        }
+
+        if (isset($schema->widget->type) && preg_match(self::PATTERN, $schema->widget->type, $output)) {
+            $options = $options + [
+                'class' => $schema->widget->link,
+                'choice_label' => 'name',
+                'choice_value' => 'name'
+            ];
         }
 
         switch ($schema->widget->id) {
